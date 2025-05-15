@@ -22,7 +22,12 @@ def index():
 
 @app.route("/webhook", methods=["POST"])
 def webhook():
+    # Get the incoming update from Telegram
+    # This will be a JSON object containing the message
+    # Example: {"update_id": 123456789, "message": {"chat": {"id": 123456789}, "text": "Hello"}}
+    # Get the JSON data from the request
     update = request.get_json()
+    
     # Check incoming message
     if not update or "message" not in update:
         return Response("", status=204)
