@@ -33,7 +33,7 @@ def webhook():
 
     if user_text:
         # Call OpenAI Chat API
-        resp = client.response.create(
+        resp = client.chat.completions.create(
             model=OPENAI_MODEL,
             messages=[
                 {"role": "system", "content": "You are a helpful assistant."},
