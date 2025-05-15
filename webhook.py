@@ -7,7 +7,7 @@ from openai import OpenAI
 # Load environment variables
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o")
 
 # Telegram and OpenAI setup
 TELEGRAM_API_URL = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}"
@@ -40,7 +40,7 @@ def webhook():
                 {"role": "user", "content": user_text}
             ],
             max_tokens=150,
-            temperature=0.7,
+            temperature=0.6,
         )
         reply_text = resp.choices[0].message.content.strip()
 
