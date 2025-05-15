@@ -12,7 +12,7 @@ OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
 # Telegram and OpenAI setup
 TELEGRAM_API_URL = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}"
 openai.api_key = OPENAI_API_KEY
-client = OpenAI(api_key=oopenai.api_key)
+client = OpenAI(api_key=openai.api_key)
 
 app = Flask(__name__)
 
