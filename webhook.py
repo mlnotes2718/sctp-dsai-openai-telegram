@@ -2,6 +2,7 @@ import os
 import requests
 from flask import Flask, request, Response
 import openai
+from openai import OpenAI
 
 # Load environment variables
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
@@ -11,6 +12,7 @@ OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
 # Telegram and OpenAI setup
 TELEGRAM_API_URL = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}"
 openai.api_key = OPENAI_API_KEY
+client = OpenAI(api_key=oopenai.api_key)
 
 app = Flask(__name__)
 
@@ -31,7 +33,7 @@ def webhook():
 
     if user_text:
         # Call OpenAI Chat API
-        resp = openai.ChatCompletion.create(
+        resp = client.response.create(
             model=OPENAI_MODEL,
             messages=[
                 {"role": "system", "content": "You are a helpful assistant."},
