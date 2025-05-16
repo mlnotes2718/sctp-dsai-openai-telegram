@@ -44,7 +44,7 @@ def webhook():
                 {"role": "system", "content": "You are a helpful assistant."},
                 {"role": "user", "content": user_text}
             ],
-            max_tokens=150,
+            #max_tokens=150,
             temperature=0.6,
         )
         reply_text = resp.choices[0].message.content.strip()
