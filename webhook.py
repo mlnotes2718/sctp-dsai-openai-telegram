@@ -40,7 +40,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # ─── Build your Flask app and PTB Application ─────────────────────────────────
-flask_app = Flask(__name__)
+sync_app = Flask(__name__)
 
 application = (
     ApplicationBuilder()
@@ -90,7 +90,7 @@ application.add_handler(MessageHandler(filters.PHOTO, handle_photo))
 
 
 # ─── One‐time startup: initialize, start, and set webhook ─────────────────────
-@flask_app.before_first_request
+@sync_app.before_first_request
 def _setup_bot():
     loop = asyncio.get_event_loop()
     # these three must be awaited once at startup
@@ -101,7 +101,7 @@ def _setup_bot():
 
 
 # ─── Webhook route (sync) ─────────────────────────────────────────────────────
-@flask_app.route("/webhook", methods=["POST"])
+@sync_app.route("/webhook", methods=["POST"])
 def telegram_webhook():
     """Receive updates from Telegram, dispatch into PTB's queue."""
     data = request.get_json(force=True)
