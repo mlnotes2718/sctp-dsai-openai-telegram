@@ -86,7 +86,7 @@ application.add_handler(MessageHandler(filters.PHOTO, handle_photo))
 async def telegram_webhook():
     update = Update.de_json(request.get_json(force=True), application.bot)
     await application.update_queue.put(update)
-    return "OK", 200
+    return "OK - This bot is alive", 200
 
 # ─── Startup: register webhook and run ──────────────────────────────────────────
 if __name__ == "__main__":
