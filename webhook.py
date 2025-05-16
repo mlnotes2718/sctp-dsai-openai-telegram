@@ -45,7 +45,7 @@ application = (
     .build()
 )
 openai.api_key = OPENAI_API_KEY
-client - OpenAI(api_key=OPENAI_API_KEY)
+client = OpenAI(api_key=OPENAI_API_KEY)
 
 # ─── Handlers ─────────────────────────────────────────────────────────────────
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
