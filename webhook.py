@@ -29,7 +29,7 @@ logging.basicConfig(level=logging.INFO)
 
 
 async def query_chatgpt(prompt: str) -> str:
-    resp = await client.chat.completions.acreate(
+    resp = await client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[{"role":"user", "content": prompt}]
     )
