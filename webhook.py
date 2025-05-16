@@ -66,7 +66,8 @@ if __name__ == "__main__":
 # Instructions:
 # 1. Set environment variables:
 #    TELEGRAM_TOKEN, OPENAI_API_KEY (and optionally OPENAI_MODEL).
-# 2. Deploy this app to Render.com (select Python service).
+# 2. Deploy this app to Render.com (select Python service). 
+#    start command in Render should be: gunicorn webhook:app
 # 3. After deployment, set your Telegram webhook:
 #    https://api.telegram.org/bot<YOUR_TELEGRAM_TOKEN>/setWebhook?url=https://<YOUR_RENDER_URL>/webhook
 # 4. Test the bot by sending messages to it on Telegram.    
