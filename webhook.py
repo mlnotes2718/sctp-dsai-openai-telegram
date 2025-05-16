@@ -7,6 +7,7 @@
 
 import os
 import logging
+import openai
 from openai import OpenAI
 from fastapi import FastAPI, Request
 from telegram import Bot, Update
