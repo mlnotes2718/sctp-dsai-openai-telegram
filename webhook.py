@@ -4,13 +4,22 @@
 # It sets up a webhook to receive messages and sends replies using the OpenAI API.
 # The bot is designed to be deployed on Render.com, but can be adapted for other platforms.
 # ─── Requirements ──────────────────────────────────────────────────────────────
+
 import os
 import logging
+import asyncio
+
 from flask import Flask, request
-from telegram import Bot, Update
-from telegram.ext import Dispatcher, CommandHandler, MessageHandler, Filters, CallbackContext
+from telegram import Update
+from telegram.ext import (
+    ApplicationBuilder,
+    CommandHandler,
+    MessageHandler,
+    ContextTypes,
+    filters,
+)
 import openai
-from openai import OpenAI
+from openai import OpenAI 
 
 # ─── Configuration ─────────────────────────────────────────────────────────────
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
@@ -18,82 +27,72 @@ WEBHOOK_URL    = os.getenv("WEBHOOK_URL")    # e.g. "https://<your-app>.onrender
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 OPENAI_MODEL   = os.getenv("OPENAI_MODEL", "gpt-4o")
 
-client = OpenAI(api_key=OPENAI_API_KEY)
-
-if not TELEGRAM_TOKEN or not WEBHOOK_URL or not OPENAI_API_KEY:
-    raise RuntimeError("Missing one of TELEGRAM_TOKEN, WEBHOOK_URL, or OPENAI_API_KEY")
-
-# set up bots & clients
-bot = Bot(token=TELEGRAM_TOKEN)
-dispatcher = Dispatcher(bot, None, use_context=True, workers=0)
-openai.api_key = OPENAI_API_KEY
+if not (TELEGRAM_TOKEN and WEBHOOK_URL and OPENAI_API_KEY):
+    raise RuntimeError("Please set TELEGRAM_TOKEN, WEBHOOK_URL, and OPENAI_API_KEY")
 
 # ─── Logging ───────────────────────────────────────────────────────────────────
 logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    format="%(asctime)s %(name)s %(levelname)s %(message)s",
     level=logging.INFO
 )
 logger = logging.getLogger(__name__)
 
+# ─── Build the PTB Application ─────────────────────────────────────────────────
+app = Flask(__name__)
+application = (
+    ApplicationBuilder()
+    .token(TELEGRAM_TOKEN)
+    .build()
+)
+openai.api_key = OPENAI_API_KEY
+client - OpenAI(api_key=OPENAI_API_KEY)
 
 # ─── Handlers ─────────────────────────────────────────────────────────────────
-def start(update: Update, context: CallbackContext):
-    update.message.reply_text(
-        "👋 Hi! Send me text and I’ll reply via ChatGPT, or send a photo and I’ll save it."
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "👋 Hi! Send me text and I'll reply via ChatGPT, or send a photo and I'll save it."
     )
 
-def handle_text(update: Update, context: CallbackContext):
+async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_text = update.message.text
-    logger.info(f"Received text from {update.effective_user.id}: {user_text!r}")
-
-    # Call OpenAI ChatCompletion
+    logger.info(f"Text from {update.effective_user.id}: {user_text!r}")
     try:
-        resp = client.chat.completions.create(
+        resp = await client.chat.completions.acreate(
             model=OPENAI_MODEL,
             messages=[{"role": "user", "content": user_text}]
         )
         reply = resp.choices[0].message.content.strip()
     except Exception as e:
         logger.error("OpenAI API error", exc_info=e)
-        reply = "⚠️ Sorry, I couldn’t process that. Please try again later."
+        reply = "⚠️ Sorry, I couldn't process that. Please try again later."
+    await update.message.reply_text(reply)
 
-    update.message.reply_text(reply)
-
-def handle_photo(update: Update, context: CallbackContext):
-    logger.info(f"Received photo from {update.effective_user.id}")
-    # pick highest resolution
+async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    logger.info(f"Photo from {update.effective_user.id}")
     photo = update.message.photo[-1]
-    file = photo.get_file()
+    file = await photo.get_file()
     os.makedirs("downloads", exist_ok=True)
-    local_path = os.path.join("downloads", f"{file.file_id}.jpg")
-    file.download(custom_path=local_path)
-    update.message.reply_text(f"✅ Image saved to `{local_path}`", quote=False)
-
+    path = os.path.join("downloads", f"{file.file_id}.jpg")
+    await file.download_to_drive(path)
+    await update.message.reply_text(f"✅ Saved image to `{path}`")
 
 # register handlers
-dispatcher.add_handler(CommandHandler("start", start))
-dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_text))
-dispatcher.add_handler(MessageHandler(Filters.photo, handle_photo))
+application.add_handler(CommandHandler("start", start))
+application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
+application.add_handler(MessageHandler(filters.PHOTO, handle_photo))
 
-
-# ─── Flask App ────────────────────────────────────────────────────────────────
-app = Flask(__name__)
-
+# ─── Flask endpoint to receive Telegram updates ────────────────────────────────
 @app.route("/webhook", methods=["POST"])
-def webhook():
-    update = Update.de_json(request.get_json(force=True), bot)
-    dispatcher.process_update(update)
+async def telegram_webhook():
+    update = Update.de_json(request.get_json(force=True), application.bot)
+    await application.update_queue.put(update)
     return "OK", 200
 
-
-# ─── Startup ──────────────────────────────────────────────────────────────────
+# ─── Startup: register webhook and run ──────────────────────────────────────────
 if __name__ == "__main__":
-    # Register webhook with Telegram
-    success = bot.set_webhook(WEBHOOK_URL)
-    if not success:
-        logger.error("Failed to set webhook")
-        raise RuntimeError("Webhook setup failed")
+    # register webhook with Telegram
+    asyncio.run(application.bot.set_webhook(WEBHOOK_URL))
 
-    # Start Flask (Render.com will bind to $PORT)
+    # for local testing; in production use an ASGI server (see below)
     port = int(os.getenv("PORT", "5000"))
     app.run(host="0.0.0.0", port=port)
