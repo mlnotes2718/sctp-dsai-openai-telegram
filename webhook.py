@@ -7,7 +7,7 @@
 
 import os
 import logging
-import openai
+from openai import OpenAI
 from fastapi import FastAPI, Request
 from telegram import Bot, Update
 from telegram.ext import ContextTypes
@@ -22,11 +22,13 @@ bot = Bot(token=TELEGRAM_TOKEN)
 app = FastAPI()
 
 openai.api_key = OPENAI_API_KEY
+client = OpenAI(api_key=OPENAI_API_KEY)
+# --- Logging ---
 logging.basicConfig(level=logging.INFO)
 
 
 async def query_chatgpt(prompt: str) -> str:
-    resp = await openai.ChatCompletion.acreate(
+    resp = await client.chat.completions.acreate(
         model="gpt-3.5-turbo",
         messages=[{"role":"user", "content": prompt}]
     )
