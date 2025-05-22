@@ -33,17 +33,15 @@ def send_telegram_message(chat_id: int, text: str):
 
 
 @app.route("/", methods=["GET"])
-def home_status():
-    """Show current webhook URL & status."""
-    info = requests.get(f"{TELEGRAM_API_URL}/getWebhookInfo", timeout=5).json()
-    if not info.get("ok"):
-        return "Failed to fetch webhook info", 500
-    r = info["result"]
-    return jsonify(
-        url=r.get("url"),
-        pending_updates=r.get("pending_update_count"),
-        last_error=r.get("last_error_message")
-    ), 200
+def index():
+    """Basic health check."""
+    status = requests.get(f"{TELEGRAM_API_URL}/getMe", timeout=5).json()
+    if not status.get("ok"):
+        logger.error("Telegram API is not reachable: %s", status)
+        return "Telegram API is not reachable.", 500
+    logger.info("Telegram API is reachable: %s", status)
+    return "OK", 200
+
 
 
 @app.route("/set_webhook", methods=["GET"])
@@ -63,16 +61,6 @@ def set_webhook():
     logger.error("Error setting webhook: %s", resp.text)
     return f"Error setting webhook: {resp.text}", resp.status_code
 
-
-@app.route("/webhook_status", methods=["GET"])
-def webhook_status():
-    """Check current webhook info."""
-    info = requests.get(f"{TELEGRAM_API_URL}/getWebhookInfo", timeout=5).json()
-    if info.get("ok"):
-        url = info["result"].get("url", "<none>")
-        last_error = info["result"].get("last_error_message")
-        return jsonify(url=url, last_error=last_error), 200
-    return "Unable to fetch webhook info", 500
 
 
 @app.route("/webhook", methods=["POST"])
