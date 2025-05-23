@@ -21,9 +21,16 @@ if not OPENAI_API_KEY:
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 if not WEBHOOK_URL:
     raise RuntimeError("Missing WEBHOOK_URL (e.g. https://your-domain)")
+# https://your-domian.onrender.com
+
 
 # ——— FastAPI app ——————————————————————————————————————
 app = FastAPI()
+
+# — Health check / root endpoint —
+@app.get("/")
+async def health_check():
+    return {"status": "alive"}
 
 @app.on_event("startup")
 async def startup_event():
