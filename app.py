@@ -40,7 +40,7 @@ def index():
         logger.error("Telegram API is not reachable: %s", status)
         return "Telegram API is not reachable.", 500
     logger.info("Telegram API is reachable: %s", status)
-    return "OK", 200
+    return "Telegram Bot is running", 200
 
 
 
