@@ -10,6 +10,9 @@ from telegram.ext import (
 )
 from openai import OpenAI
 
+import dotenv
+dotenv.load_dotenv()
+
 # Load configuration from environment
 TOKEN = os.environ["TELEGRAM_TOKEN"]
 WEBHOOK_URL = os.environ["WEBHOOK_URL"]  # e.g. "https://your.domain/webhook"
