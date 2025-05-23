@@ -10,8 +10,8 @@ from telegram.ext import (
 )
 from openai import OpenAI
 
-# import dotenv
-# dotenv.load_dotenv()
+import dotenv
+dotenv.load_dotenv()
 
 # Load configuration from environment
 TOKEN = os.environ["TELEGRAM_TOKEN"]
@@ -56,7 +56,7 @@ def main():
         port=PORT,
         url_path=TOKEN,
         webhook_url=f"{WEBHOOK_URL}/{TOKEN}",
-        drop_pending_updates=True,  # :contentReference[oaicite:1]{index=1}
+        drop_pending_updates=True,  
     )
 
 if __name__ == "__main__":
