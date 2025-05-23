@@ -130,5 +130,5 @@ if __name__ == "__main__":
     import uvicorn
     uvicorn.run("app:app", host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
 
-## gunicorn app:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT
+## uvicorn app:app --host 0.0.0.0 --port $PORT
 
