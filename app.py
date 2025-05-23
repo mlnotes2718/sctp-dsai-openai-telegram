@@ -10,8 +10,8 @@ from telegram.ext import (
 )
 from openai import OpenAI
 
-import dotenv
-dotenv.load_dotenv()
+# import dotenv
+# dotenv.load_dotenv()
 
 # Load configuration from environment
 TOKEN = os.environ["TELEGRAM_TOKEN"]
