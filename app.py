@@ -50,7 +50,9 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-    # Start the webhook listener, dropping any pending updates on startup
+    print("Bot is running with polling...")
+
+    #Start the webhook listener, dropping any pending updates on startup
     app.run_webhook(
         listen="0.0.0.0",
         port=PORT,
@@ -59,5 +61,16 @@ def main():
         drop_pending_updates=True,  
     )
 
+    # Local testing with polling
+    #app.run_polling()
+
 if __name__ == "__main__":
     main()
+
+
+# Need to install ngrok to expose the local server
+# and set the WEBHOOK_URL to the ngrok URL.
+# To run the bot, set the environment variables:
+# TELEGRAM_TOKEN, WEBHOOK_URL, OPENAI_API_KEY, and PORT.
+
+# Alternatively, you can run the bot with polling by uncommenting the `app.run_polling()` line and commenting out the `app.run_webhook(...)` line.
