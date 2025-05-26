@@ -47,18 +47,12 @@ SYSTEM_PROMPT = config['system_prompt']
 # Initialize OpenAI client instance
 client = OpenAI(api_key=OPENAI_API_KEY)
 
+#
 # ------------------------------------------------------------------------------
-# Flask App & Telegram Webhook Handler
+# Function to set the Telegram webhook
 # ------------------------------------------------------------------------------
-
-app = Flask(__name__)
-
-@app.route('/', methods=['GET', 'HEAD'])
-def index():
-    return '', 200
-
-@app.route("/set_webhook", methods=['GET'])
 def set_webhook():
+    
     logger.info('Starting Telegram Bot with OpenAI integration...')
 
     # Ensure TELEGRAM_TOKEN and WEBHOOK_URL are set
@@ -70,6 +64,8 @@ def set_webhook():
     if not OPENAI_API_KEY:
         logger.error('OPENAI_API_KEY must be set in the environment')
         exit(1)
+    
+    # Log the configuration details
     logger.info('Using OpenAI model: %s', MODEL)
     logger.info('Using Telegram webhook URL: %s', WEBHOOK_URL)
     logger.info('Using system prompt: %s', SYSTEM_PROMPT)
@@ -95,6 +91,27 @@ def set_webhook():
         logger.error('Failed to set webhook: %s - %s', response.status_code, response.text)    
 
     return jsonify({'status': 'Webhook set successfully'}), 200
+
+# ------------------------------------------------------------------------------
+# Flask App & Telegram Webhook Handler
+# ------------------------------------------------------------------------------
+
+app = Flask(__name__)
+
+@app.route('/', methods=['GET', 'HEAD'])
+def index():
+    return '', 200
+
+@app.before_first_request
+def before_first_request():
+    """
+    This function runs before the first request to the Flask app.
+    It can be used to perform any setup tasks, such as setting the webhook.
+    """
+    logger.info('Flask app is starting up...')
+    resp = set_webhook()
+    return resp
+
 
 
 # ------------------------------------------------------------------------------
@@ -146,7 +163,7 @@ def webhook_telegram():
     return '', 200
 
 # ------------------------------------------------------------------------------
-# App Startup: Webhook Management & Server Launch
+# App Startup: Webhook Management & Server Launch (Local Development)
 # ------------------------------------------------------------------------------
 
 if __name__ == '__main__':
@@ -159,5 +176,3 @@ if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
 
-# Note: In production, consider using Gunicorn or another WSGI server instead of Flask's built-in server.
-# This is a simple Flask app that handles Telegram messages and responds using OpenAI's API.
