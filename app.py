@@ -57,6 +57,49 @@ app = Flask(__name__)
 def index():
     return '', 200
 
+@app.route("/set_webhook", methods=['GET'])
+def set_webhook():
+    logger.info('Starting Telegram Bot with OpenAI integration...')
+
+    # Ensure TELEGRAM_TOKEN and WEBHOOK_URL are set
+    if not TELEGRAM_TOKEN or not WEBHOOK_URL:
+        logger.error('TELEGRAM_TOKEN and WEBHOOK_URL must be set in the environment or config.yaml')
+        exit(1)
+    
+    # Ensure OPENAI_API_KEY is set
+    if not OPENAI_API_KEY:
+        logger.error('OPENAI_API_KEY must be set in the environment')
+        exit(1)
+    logger.info('Using OpenAI model: %s', MODEL)
+    logger.info('Using Telegram webhook URL: %s', WEBHOOK_URL)
+    logger.info('Using system prompt: %s', SYSTEM_PROMPT)
+
+    # On startup, remove any existing webhook to clear pending updates
+    delete_webhook_url = f'https://api.telegram.org/bot{TELEGRAM_TOKEN}/deleteWebhook'
+    response = requests.post(
+        delete_webhook_url,
+        json={'url': WEBHOOK_URL, 'drop_pending_updates': True}
+    )
+    if response.status_code == 200:
+        logger.info('Previous Webhook %s removed', WEBHOOK_URL)
+    else:
+        logger.error('Failed to remove webhook: %s - %s', response.status_code, response.text)
+
+    # Then set the new webhook so Telegram knows where to send updates
+    set_webhook_url = f'https://api.telegram.org/bot{TELEGRAM_TOKEN}/setWebhook?url={WEBHOOK_URL}/webhook_telegram'
+    logger.info('Setting new webhook to %s', set_webhook_url)
+    response = requests.post(set_webhook_url, json={'url': WEBHOOK_URL})
+    if response.status_code == 200:
+        logger.info('Webhook set successfully to %s', WEBHOOK_URL)
+    else:
+        logger.error('Failed to set webhook: %s - %s', response.status_code, response.text)    
+
+    return jsonify({'status': 'Webhook set successfully'}), 200
+
+
+# ------------------------------------------------------------------------------
+# Webhook Endpoint: Handle Incoming Telegram Messages
+
 @app.route('/webhook_telegram', methods=['POST'])
 def webhook_telegram():
     """
@@ -108,40 +151,9 @@ def webhook_telegram():
 
 if __name__ == '__main__':
     
-    logger.info('Starting Telegram Bot with OpenAI integration...')
-
-    # Ensure TELEGRAM_TOKEN and WEBHOOK_URL are set
-    if not TELEGRAM_TOKEN or not WEBHOOK_URL:
-        logger.error('TELEGRAM_TOKEN and WEBHOOK_URL must be set in the environment or config.yaml')
-        exit(1)
-    
-    # Ensure OPENAI_API_KEY is set
-    if not OPENAI_API_KEY:
-        logger.error('OPENAI_API_KEY must be set in the environment')
-        exit(1)
-    logger.info('Using OpenAI model: %s', MODEL)
-    logger.info('Using Telegram webhook URL: %s', WEBHOOK_URL)
-    logger.info('Using system prompt: %s', SYSTEM_PROMPT)
-
-    # On startup, remove any existing webhook to clear pending updates
-    delete_webhook_url = f'https://api.telegram.org/bot{TELEGRAM_TOKEN}/deleteWebhook'
-    response = requests.post(
-        delete_webhook_url,
-        json={'url': WEBHOOK_URL, 'drop_pending_updates': True}
-    )
-    if response.status_code == 200:
-        logger.info('Previous Webhook %s removed', WEBHOOK_URL)
-    else:
-        logger.error('Failed to remove webhook: %s - %s', response.status_code, response.text)
-
-    # Then set the new webhook so Telegram knows where to send updates
-    set_webhook_url = f'https://api.telegram.org/bot{TELEGRAM_TOKEN}/setWebhook?url={WEBHOOK_URL}/webhook_telegram'
-    logger.info('Setting new webhook to %s', set_webhook_url)
-    response = requests.post(set_webhook_url, json={'url': WEBHOOK_URL})
-    if response.status_code == 200:
-        logger.info('Webhook set successfully to %s', WEBHOOK_URL)
-    else:
-        logger.error('Failed to set webhook: %s - %s', response.status_code, response.text)
+    # Set the webhook when the app starts
+    set_webhook()
+    logger.info('Webhook set successfully. Bot is ready to receive messages.')
 
     # Finally, start the Flask development server (or use Gunicorn in production)
     port = int(os.getenv('PORT', 5000))
