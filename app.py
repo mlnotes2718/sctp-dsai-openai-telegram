@@ -53,6 +53,10 @@ client = OpenAI(api_key=OPENAI_API_KEY)
 
 app = Flask(__name__)
 
+@app.route('/', methods=['GET', 'HEAD'])
+def index():
+    return '', 200
+
 @app.route('/webhook_telegram', methods=['POST'])
 def webhook_telegram():
     """
@@ -118,7 +122,7 @@ if __name__ == '__main__':
     logger.info('Using OpenAI model: %s', MODEL)
     logger.info('Using Telegram webhook URL: %s', WEBHOOK_URL)
     logger.info('Using system prompt: %s', SYSTEM_PROMPT)
-    
+
     # On startup, remove any existing webhook to clear pending updates
     delete_webhook_url = f'https://api.telegram.org/bot{TELEGRAM_TOKEN}/deleteWebhook'
     response = requests.post(
