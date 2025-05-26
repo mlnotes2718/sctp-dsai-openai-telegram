@@ -39,41 +39,41 @@ SYSTEM_PROMPT = config['system_prompt']
 client = OpenAI(api_key=OPENAI_API_KEY)
 
 # Initialize Flask app
-def create_app():
-    app = Flask(__name__)
+app = Flask(__name__)
 
-    @app.route('/webhook_telegram', methods=['POST'])
-    def webhook_telegram():
-        data = request.get_json()
-        logger.info('Received update: %s', data)
+# Telegram webhook endpoint
+@app.route('/webhook_telegram', methods=['POST'])
+def webhook_telegram():
+    data = request.get_json()
+    logger.info('Received update: %s', data)
 
-        if 'message' in data:
-            chat_id = data['message']['chat']['id']
-            user_text = data['message']['text']
-            logger.info('Chat %s says: %s', chat_id, user_text)
+    if 'message' in data:
+        chat_id = data['message']['chat']['id']
+        user_text = data['message']['text']
+        logger.info('Chat %s says: %s', chat_id, user_text)
 
-            # Call OpenAI Chat Completions API
-            response = client.chat.completions.create(
-                model=MODEL,
-                messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user",   "content": user_text}
-                ]
-            )
-            reply = response.choices[0].message.content
-            logger.info('OpenAI reply: %s', reply)
+        # Call OpenAI Chat Completions API
+        response = client.chat.completions.create(
+            model=MODEL,
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user",   "content": user_text}
+            ]
+        )
+        reply = response.choices[0].message.content
+        logger.info('OpenAI reply: %s', reply)
 
-            # Send reply back to Telegram
-            send_url = f'https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage'
-            payload = {
-                'chat_id': chat_id,
-                'text': reply
-            }
-            response = requests.post(send_url, json=payload)
-            if response.status_code != 200:
-                logger.error('Failed to send message: %s - %s', response.status_code, response.text)
-            else:
-                logger.info('Message sent successfully to chat %s', chat_id)
+        # Send reply back to Telegram
+        send_url = f'https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage'
+        payload = {
+            'chat_id': chat_id,
+            'text': reply
+        }
+        response = requests.post(send_url, json=payload)
+        if response.status_code != 200:
+            logger.error('Failed to send message: %s - %s', response.status_code, response.text)
+        else:
+            logger.info('Message sent successfully to chat %s', chat_id)
 
         return jsonify({'status': 'ok'})
 
@@ -81,8 +81,6 @@ def create_app():
 
 
 if __name__ == '__main__':
-    # Create Flask app
-    app = create_app()
 
     # Delete any previous Telegram webhook on startup
     delete_webhook_url = f'https://api.telegram.org/bot{TELEGRAM_TOKEN}/deleteWebhook'
