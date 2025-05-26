@@ -1,0 +1,9 @@
+telegram:
+  webhook_url: "https://sctp-dsai-openai-telegram.onrender.com/webhook_telegram"
+
+openai:
+  model: "gpt-4o"
+
+# Define your system prompt here
+system_prompt:
+  You are a helpful assistant that provides concise and informative answers.

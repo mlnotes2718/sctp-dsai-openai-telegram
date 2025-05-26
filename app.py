@@ -1,134 +1,106 @@
+# app.py
+
 import os
+import yaml
+from dotenv import load_dotenv
 import logging
 
-from fastapi import FastAPI, Request, HTTPException
-from httpx import AsyncClient, HTTPError
-from openai import AsyncOpenAI
+from flask import Flask, request, jsonify
+import requests
+from openai import OpenAI
 
-# ——— Logging setup —————————————————————————————————————
-logging.basicConfig(level=logging.INFO)
+# Load environment variables from .env
+load_dotenv()
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
-# ——— Load & validate env vars ——————————————————————————
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-if not TELEGRAM_TOKEN:
-    raise RuntimeError("Missing TELEGRAM_TOKEN")
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-if not OPENAI_API_KEY:
-    raise RuntimeError("Missing OPENAI_API_KEY")
+# Load configuration from YAML
+with open('config.yaml', 'r') as f:
+    config = yaml.safe_load(f)
 
-WEBHOOK_URL = os.getenv("WEBHOOK_URL")
-if not WEBHOOK_URL:
-    raise RuntimeError("Missing WEBHOOK_URL (e.g. https://your-domain)")
-# https://your-domian.onrender.com
+# Telegram settings
+TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN') 
+WEBHOOK_URL = config['telegram']['webhook_url']
 
+# OpenAI settings
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY') 
+MODEL = config['openai']['model']
 
-# ——— FastAPI app ——————————————————————————————————————
-app = FastAPI()
+# System prompt loaded from config
+SYSTEM_PROMPT = config['system_prompt']
 
-# — Health check / root endpoint —
-@app.get("/")
-async def health_check():
-    return {"status": "alive"}
+# Initialize OpenAI client
+client = OpenAI(api_key=OPENAI_API_KEY)
 
-@app.on_event("startup")
-async def startup_event():
-    # create and store shared HTTPX client with a 10s timeout
-    app.state.http = AsyncClient(timeout=10.0)
+# Initialize Flask app
+def create_app():
+    app = Flask(__name__)
 
-    # AsyncOpenAI client
-    app.state.openai = AsyncOpenAI(api_key=OPENAI_API_KEY)
+    @app.route('/webhook_telegram', methods=['POST'])
+    def webhook_telegram():
+        data = request.get_json()
+        logger.info('Received update: %s', data)
 
-    # 1. Delete existing webhook & drop pending updates
-    try:
-        resp = await app.state.http.post(
-            f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/deleteWebhook",
-            json={"drop_pending_updates": True}
-        )
-        resp.raise_for_status()
-        data = resp.json()
-        if not data.get("ok"):
-            logger.error("deleteWebhook failed: %s", data)
-    except HTTPError as e:
-        logger.error("Error deleting Telegram webhook", exc_info=True)
+        if 'message' in data:
+            chat_id = data['message']['chat']['id']
+            user_text = data['message']['text']
+            logger.info('Chat %s says: %s', chat_id, user_text)
 
-    # 2. Register new webhook
-    hook_endpoint = f"{WEBHOOK_URL}/webhook/{TELEGRAM_TOKEN}"
-    try:
-        resp = await app.state.http.post(
-            f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/setWebhook",
-            json={"url": hook_endpoint}
-        )
-        resp.raise_for_status()
-        data = resp.json()
-        if data.get("ok"):
-            logger.info("Registered webhook at %s", hook_endpoint)
-        else:
-            logger.error("setWebhook failed: %s", data)
-    except HTTPError:
-        logger.error("Error setting Telegram webhook", exc_info=True)
+            # Call OpenAI Chat Completions API
+            response = client.chat.completions.create(
+                model=MODEL,
+                messages=[
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user",   "content": user_text}
+                ]
+            )
+            reply = response.choices[0].message.content
+            logger.info('OpenAI reply: %s', reply)
 
+            # Send reply back to Telegram
+            send_url = f'https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage'
+            payload = {
+                'chat_id': chat_id,
+                'text': reply
+            }
+            response = requests.post(send_url, json=payload)
+            if response.status_code != 200:
+                logger.error('Failed to send message: %s - %s', response.status_code, response.text)
+            else:
+                logger.info('Message sent successfully to chat %s', chat_id)
 
-@app.post("/webhook/{token}")
-async def telegram_webhook(token: str, request: Request):
-    # validate token
-    if token != TELEGRAM_TOKEN:
-        raise HTTPException(status_code=403, detail="Invalid token")
+        return jsonify({'status': 'ok'})
 
-    body = await request.json()
-
-    # support both new and edited messages
-    msg = body.get("message") or body.get("edited_message")
-    if not msg:
-        return {"ok": True}
-
-    text = msg.get("text")
-    if not text:
-        # ignore stickers, photos, etc.
-        return {"ok": True}
-
-    chat_id = msg["chat"]["id"]
-
-    # — Query OpenAI —
-    try:
-        completion = await app.state.openai.chat.completions.create(
-            model="gpt-4o",
-            messages=[{"role": "user", "content": text}],
-            timeout=10.0  # override if needed
-        )
-        reply = completion.choices[0].message.content
-    except Exception:
-        logger.exception("OpenAI API error")
-        reply = "❗️ Sorry, something went wrong on the AI side. Please try again."
-
-    # — Send reply back to Telegram —
-    try:
-        resp = await app.state.http.post(
-            f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
-            json={"chat_id": chat_id, "text": reply}
-        )
-        resp.raise_for_status()
-    except HTTPError:
-        logger.error("Failed to send Telegram message", exc_info=True)
-
-    return {"ok": True}
+    return app
 
 
-@app.on_event("shutdown")
-async def shutdown_event():
-    # close HTTPX client
-    await app.state.http.aclose()
-    # close OpenAI client (if it supports aclose)
-    try:
-        await app.state.openai.aclose()
-    except AttributeError:
-        pass
+if __name__ == '__main__':
+    # Create Flask app
+    app = create_app()
 
+    # Delete any previous Telegram webhook on startup
+    delete_webhook_url = f'https://api.telegram.org/bot{TELEGRAM_TOKEN}/deleteWebhook'
+    response = requests.post(delete_webhook_url, json={'url': WEBHOOK_URL, 'drop_pending_updates': True})
+    if response.status_code == 200:
+        logger.info('Previous Webhook %s removed', WEBHOOK_URL)
+    else:
+        logger.error('Failed to remove webhook: %s - %s', response.status_code, response.text)
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("app:app", host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
+    # Set Telegram webhook on startup
+    set_webhook_url = f'https://api.telegram.org/bot{TELEGRAM_TOKEN}/setWebhook'
+    response = requests.post(set_webhook_url, json={'url': WEBHOOK_URL})
+    if response.status_code == 200:
+        logger.info('Webhook set successfully to %s', WEBHOOK_URL)
+    else:
+        logger.error('Failed to set webhook: %s - %s', response.status_code, response.text)
 
-## uvicorn app:app --host 0.0.0.0 --port $PORT
+    # Run app
+    port = int(os.getenv('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
 
