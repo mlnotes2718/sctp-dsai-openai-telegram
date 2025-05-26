@@ -135,7 +135,8 @@ if __name__ == '__main__':
         logger.error('Failed to remove webhook: %s - %s', response.status_code, response.text)
 
     # Then set the new webhook so Telegram knows where to send updates
-    set_webhook_url = f'https://api.telegram.org/bot{TELEGRAM_TOKEN}/setWebhook'
+    set_webhook_url = f'https://api.telegram.org/bot{TELEGRAM_TOKEN}/setWebhook?url={WEBHOOK_URL}/webhook_telegram'
+    logger.info('Setting new webhook to %s', set_webhook_url)
     response = requests.post(set_webhook_url, json={'url': WEBHOOK_URL})
     if response.status_code == 200:
         logger.info('Webhook set successfully to %s', WEBHOOK_URL)

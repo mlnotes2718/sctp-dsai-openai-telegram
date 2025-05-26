@@ -1,5 +1,5 @@
 telegram:
-  webhook_url: "https://sctp-dsai-openai-telegram.onrender.com/webhook_telegram"
+  webhook_url: "https://sctp-dsai-openai-telegram.onrender.com/"
 
 openai:
   model: "gpt-4o"
