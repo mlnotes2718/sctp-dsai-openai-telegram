@@ -4,4 +4,4 @@ openai
 gunicorn
 python-dotenv
 logging
-yaml
+pyyaml
