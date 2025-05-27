@@ -96,9 +96,13 @@ def set_webhook():
 # ------------------------------------------------------------------------------
 
 app = Flask(__name__)
-response = set_webhook()
-logging.info('Webhook response: %s', response)
+# response = set_webhook()
+# logging.info('Webhook response: %s', response)
 
+# Register the startup function
+with app.app_context():
+    response = set_webhook()
+    logging.info('Webhook response: %s', response)
 
 @app.route('/', methods=['GET', 'HEAD'])
 def index():
@@ -108,6 +112,7 @@ def index():
 # ------------------------------------------------------------------------------
 # Webhook Endpoint: Handle Incoming Telegram Messages
 # ------------------------------------------------------------------------------
+
 @app.route('/webhook_telegram', methods=['POST'])
 def webhook_telegram():
     """
