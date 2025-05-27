@@ -1,10 +1,21 @@
 # app.py
 
+# This file is part of the ChatGPT Telegram Bot project.
+# It sets up a Flask web server that integrates with the Telegram Bot API
+# and OpenAI's Chat Completions API to create a conversational bot. 
+# The bot responds to user messages in Telegram using a specified OpenAI model.
+# It also manages the webhook setup to receive updates from Telegram.
+
+# ------------------------------------------------------------------------------
+# Import necessary libraries
+# ------------------------------------------------------------------------------
+# Standard libraries
 import os
 import yaml
 from dotenv import load_dotenv
 import logging
 
+# Third-party libraries
 from flask import Flask, request, jsonify
 import requests
 from openai import OpenAI
@@ -36,6 +47,8 @@ TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 # Webhook URL to which Telegram will send updates
 WEBHOOK_URL = config['telegram']['webhook_url']
 
+telegram_base_url = f'https://api.telegram.org/bot{TELEGRAM_TOKEN}'
+
 # OpenAI API key from environment
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 # Model name to use (e.g., "gpt-4o-mini") from config
@@ -66,7 +79,7 @@ def set_webhook():
     # Log the configuration details
     logger.info('Using OpenAI model: %s', MODEL)
     logger.info('Using Telegram webhook URL: %s', WEBHOOK_URL)
-    logger.info('Using system prompt: %s', SYSTEM_PROMPT)
+    logger.info('Using System Prompt: %s', SYSTEM_PROMPT)
 
     # On startup, remove any existing webhook to clear pending updates
     delete_webhook_url = f'https://api.telegram.org/bot{TELEGRAM_TOKEN}/deleteWebhook'
@@ -104,7 +117,12 @@ with app.app_context():
 
 @app.route('/', methods=['GET', 'HEAD'])
 def index():
-    return 'Welcome to ChatGPT on Telegram', 200
+    """
+    Call Telegram's getWebhookInfo endpoint and return the JSON payload.
+    """
+    resp = requests.get(f"{telegram_base_url}/getWebhookInfo")
+    return resp.json()
+
 
 
 # ------------------------------------------------------------------------------
