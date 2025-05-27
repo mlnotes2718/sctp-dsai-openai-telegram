@@ -96,8 +96,6 @@ def set_webhook():
 # ------------------------------------------------------------------------------
 
 app = Flask(__name__)
-# response = set_webhook()
-# logging.info('Webhook response: %s', response)
 
 # Register the startup function
 with app.app_context():
