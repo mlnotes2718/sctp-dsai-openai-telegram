@@ -47,12 +47,10 @@ SYSTEM_PROMPT = config['system_prompt']
 # Initialize OpenAI client instance
 client = OpenAI(api_key=OPENAI_API_KEY)
 
-#
 # ------------------------------------------------------------------------------
-# Function to set the Telegram webhook
+# Functions for Setting Webhook
 # ------------------------------------------------------------------------------
 def set_webhook():
-    
     logger.info('Starting Telegram Bot with OpenAI integration...')
 
     # Ensure TELEGRAM_TOKEN and WEBHOOK_URL are set
@@ -92,31 +90,24 @@ def set_webhook():
 
     return jsonify({'status': 'Webhook set successfully'}), 200
 
+
 # ------------------------------------------------------------------------------
 # Flask App & Telegram Webhook Handler
 # ------------------------------------------------------------------------------
 
 app = Flask(__name__)
+response = set_webhook()
+logging.info('Webhook response: %s', response)
+
 
 @app.route('/', methods=['GET', 'HEAD'])
 def index():
-    return '', 200
-
-@app.before_first_request
-def before_first_request():
-    """
-    This function runs before the first request to the Flask app.
-    It can be used to perform any setup tasks, such as setting the webhook.
-    """
-    logger.info('Flask app is starting up...')
-    resp = set_webhook()
-    return resp
-
+    return 'Welcome to ChatGPT on Telegram', 200
 
 
 # ------------------------------------------------------------------------------
 # Webhook Endpoint: Handle Incoming Telegram Messages
-
+# ------------------------------------------------------------------------------
 @app.route('/webhook_telegram', methods=['POST'])
 def webhook_telegram():
     """
